@@ -1,3 +1,4 @@
+mod communication;
 mod engine;
 mod maze;
 mod mazefile;

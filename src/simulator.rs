@@ -1,6 +1,8 @@
+use anyhow::{anyhow, Context, Result};
 use pix_engine::prelude::Engine;
+use std::{sync::mpsc, thread};
 
-use crate::{engine::SimEngine, maze::Maze, COLS, ROWS};
+use crate::{communication::SimCommunication, engine::SimEngine, maze::Maze, COLS, ROWS};
 
 const RATIO_VIS_MM: i32 = 4;
 
@@ -18,6 +20,32 @@ pub struct MazeSimulator<const R: usize, const C: usize>;
 
 impl<const R: usize, const C: usize> MazeSimulator<R, C> {
     pub fn run(maze: Maze<R, C>) -> anyhow::Result<()> {
+        let (request_tx, request_rx) = mpsc::channel();
+        let (response_tx, response_rx) = mpsc::channel();
+
+        let _ = thread::spawn(move || {
+            let process = || -> Result<()> {
+                loop {
+                    match request_rx.try_recv() {
+                        Ok(request) => {
+                            println!("{:?}", request);
+                            response_tx
+                                .send(crate::communication::MazeRunnerResponse::Error)
+                                .context("Failed to propagate response")?
+                        }
+                        Err(mpsc::TryRecvError::Empty) => {}
+                        Err(e) => return Err(anyhow!("Channel dropped: {e}")),
+                    }
+                }
+            };
+
+            process().unwrap();
+        });
+
+        let communication = SimCommunication::new(request_tx, response_rx)?;
+
+        let _ = thread::spawn(move || communication.process().unwrap());
+
         let mut engine = SimEngine::new(maze);
 
         let mut pix_engine = Engine::builder()

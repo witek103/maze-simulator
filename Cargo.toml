@@ -8,6 +8,8 @@ authors = ["Witold Lipieta <witek103@gmail.com>"]
 
 [dependencies]
 anyhow = "1.0.72"
-bitflags = "2.3.3"
+bitflags = { version = "2.3.3", features = ["serde"] }
 clap = { version = "4.3.19", features = ["derive"] }
 pix-engine = "0.7.0"
+postcard = { version = "1.0.6", features = ["use-std"] }
+serde = "1.0.178"

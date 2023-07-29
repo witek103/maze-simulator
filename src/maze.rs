@@ -1,6 +1,7 @@
 use anyhow::{anyhow, bail, Context, Result};
 use bitflags::bitflags;
 use pix_engine::{prelude::Color, rect, state::PixState};
+use serde::{Deserialize, Serialize};
 
 use crate::{
     engine::Render,
@@ -10,7 +11,8 @@ use crate::{
 pub struct Posts<const R: usize, const C: usize>;
 
 bitflags! {
-    #[derive(Default, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+    #[derive(Serialize, Deserialize, Default, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+    #[serde(transparent)]
     pub struct CellState: u8 {
         const NorthWall = 0b00000001;
         const EastWall = 0b00000010;
