@@ -1,0 +1,13 @@
+[package]
+name = "maze-simulator"
+version = "0.1.0"
+edition = "2021"
+authors = ["Witold Lipieta <witek103@gmail.com>"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.72"
+bitflags = "2.3.3"
+clap = { version = "4.3.19", features = ["derive"] }
+pix-engine = "0.7.0"
