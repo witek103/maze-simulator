@@ -15,8 +15,11 @@ pub const CELL_SIZE_VIS: i32 = CELL_SIZE_MM / RATIO_VIS_MM;
 pub const WALL_WIDTH_VIS: i32 = WALL_WIDTH_MM / RATIO_VIS_MM;
 pub const WALL_LENGTH_VIS: i32 = CELL_SIZE_VIS - WALL_WIDTH_VIS;
 
+pub const PANEL_WIDTH: i32 = 400;
+
 pub const APP_HEIGHT: u32 = CELL_SIZE_VIS as u32 * ROWS as u32 + WALL_WIDTH_VIS as u32;
-pub const APP_WIDTH: u32 = CELL_SIZE_VIS as u32 * COLS as u32 + WALL_WIDTH_VIS as u32;
+pub const APP_WIDTH: u32 =
+    CELL_SIZE_VIS as u32 * COLS as u32 + WALL_WIDTH_VIS as u32 + PANEL_WIDTH as u32;
 
 pub struct MazeSimulator<const R: usize, const C: usize>;
 

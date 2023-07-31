@@ -2,8 +2,11 @@ use anyhow::Result;
 use pix_engine::prelude::*;
 use std::sync::{Arc, Mutex};
 
-use crate::maze::{Maze, Posts};
-use crate::position::Position;
+use crate::{
+    maze::{Maze, Posts},
+    panel::SimPanel,
+    position::Position,
+};
 
 pub trait Render {
     fn draw<C>(&self, s: &mut PixState, primary_color: C, secondary_color: C) -> Result<()>
@@ -15,6 +18,7 @@ pub struct SimEngine<const R: usize, const C: usize> {
     posts: Posts<R, C>,
     maze: Maze<R, C>,
     runner_position: Arc<Mutex<Position<R>>>,
+    panel: SimPanel,
 }
 
 impl<const R: usize, const C: usize> SimEngine<R, C> {
@@ -23,6 +27,7 @@ impl<const R: usize, const C: usize> SimEngine<R, C> {
             maze,
             posts: Posts {},
             runner_position,
+            panel: SimPanel {},
         }
     }
 }
@@ -46,6 +51,8 @@ impl<const R: usize, const C: usize> PixEngine for SimEngine<R, C> {
                 .unwrap()
                 .draw(s, Color::DARK_GREEN, Color::LIGHT_GREEN)?;
         }
+
+        self.panel.draw(s, Color::DIM_GRAY, Color::DARK_GRAY)?;
 
         Ok(())
     }
