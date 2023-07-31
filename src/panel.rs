@@ -1,7 +1,10 @@
+use std::sync::{Arc, Mutex};
+
 use anyhow::Result;
 use pix_engine::{prelude::Color, rect, state::PixState};
 
 use crate::{
+    communication::ButtonsState,
     engine::Render,
     simulator::{APP_HEIGHT, APP_WIDTH, PANEL_WIDTH},
 };
@@ -9,20 +12,19 @@ use crate::{
 pub const PANEL_Y_OFFSET: i32 = 0;
 pub const PANEL_X_OFFSET: i32 = APP_WIDTH as i32 - PANEL_WIDTH;
 
-#[derive(Debug)]
-pub enum Button {
-    Reset,
-    Button1,
-    Button2,
-    Button3,
-    Button4,
+pub struct SimPanel {
+    buttons: Arc<Mutex<ButtonsState>>,
 }
 
-pub struct SimPanel {}
-
 impl SimPanel {
-    pub fn button_pressed(&self, button: Button) {
-        print!("Pressed: {:?}\n", button);
+    pub fn new(buttons: Arc<Mutex<ButtonsState>>) -> Self {
+        Self { buttons }
+    }
+
+    pub fn button_pressed(&self, button: ButtonsState) {
+        let mut buttons_state = self.buttons.lock().unwrap();
+
+        buttons_state.set(button, true);
     }
 }
 
@@ -52,26 +54,26 @@ impl Render for SimPanel {
         s.stroke(None);
 
         if s.button("Reset")? {
-            self.button_pressed(Button::Reset);
+            self.button_pressed(ButtonsState::Reset);
         }
         s.same_line(None);
         if s.button("BTN1")? {
-            self.button_pressed(Button::Button1);
+            self.button_pressed(ButtonsState::Button1);
         }
 
         s.same_line(None);
         if s.button("BTN2")? {
-            self.button_pressed(Button::Button2);
+            self.button_pressed(ButtonsState::Button2);
         }
 
         s.same_line(None);
         if s.button("BTN3")? {
-            self.button_pressed(Button::Button3);
+            self.button_pressed(ButtonsState::Button3);
         }
 
         s.same_line(None);
         if s.button("BTN4")? {
-            self.button_pressed(Button::Button4);
+            self.button_pressed(ButtonsState::Button4);
         }
 
         Ok(())

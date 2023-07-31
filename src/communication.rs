@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use bitflags::bitflags;
 use postcard::{from_bytes, to_stdvec};
 use serde::{Deserialize, Serialize};
 use std::io::prelude::*;
@@ -6,6 +7,18 @@ use std::os::unix::net::{UnixListener, UnixStream};
 use std::sync::mpsc::{Receiver, Sender};
 
 const SOCKET: &str = "/tmp/micromouse_simulator_socket";
+
+bitflags! {
+    #[derive(Serialize, Deserialize, Default, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+    #[serde(transparent)]
+    pub struct ButtonsState: u8 {
+        const Reset = 0b00000001;
+        const Button1 = 0b00000010;
+        const Button2 = 0b00000100;
+        const Button3 = 0b00001000;
+        const Button4 = 0b00010000;
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum MazeRunnerRequest {
@@ -16,6 +29,7 @@ pub enum MazeRunnerRequest {
     GetWallFront,
     GetWallRight,
     GetWallLeft,
+    GetButtonsState,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -23,6 +37,7 @@ pub enum MazeRunnerResponse {
     Ack,
     Error,
     WallDetected(bool),
+    Buttons(ButtonsState),
 }
 pub struct SimCommunication {
     listener: UnixListener,

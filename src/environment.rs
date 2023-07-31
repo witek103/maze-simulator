@@ -9,7 +9,7 @@ use std::{
 };
 
 use crate::{
-    communication::{MazeRunnerRequest, MazeRunnerResponse},
+    communication::{ButtonsState, MazeRunnerRequest, MazeRunnerResponse},
     maze::Maze,
     position::{Angle, Position},
     runner::{MazerRunner, RotationDirection, SensorDirection},
@@ -24,6 +24,7 @@ pub struct SimEnvironment<const R: usize, const C: usize> {
     response_tx: Sender<MazeRunnerResponse>,
     runner_position: Arc<Mutex<Position<R>>>,
     runner: MazerRunner<R, C>,
+    buttons: Arc<Mutex<ButtonsState>>,
 }
 
 impl<const R: usize, const C: usize> SimEnvironment<R, C> {
@@ -38,12 +39,15 @@ impl<const R: usize, const C: usize> SimEnvironment<R, C> {
 
         let runner_position = Arc::new(Mutex::new(runner_position));
 
+        let buttons = Arc::new(Mutex::new(ButtonsState::default()));
+
         Ok(Self {
             maze,
             request_rx,
             response_tx,
             runner_position,
             runner,
+            buttons,
         })
     }
 
@@ -59,6 +63,10 @@ impl<const R: usize, const C: usize> SimEnvironment<R, C> {
 
     pub fn get_runner_position_handle(&self) -> Arc<Mutex<Position<R>>> {
         self.runner_position.clone()
+    }
+
+    pub fn get_buttons_handle(&self) -> Arc<Mutex<ButtonsState>> {
+        self.buttons.clone()
     }
 
     fn process_request(&mut self, request: MazeRunnerRequest) -> Result<()> {
@@ -81,6 +89,7 @@ impl<const R: usize, const C: usize> SimEnvironment<R, C> {
             MazeRunnerRequest::MoveForward => self.process_move_forward(),
             MazeRunnerRequest::RotateLeft90 => self.process_rotate(RotationDirection::Left),
             MazeRunnerRequest::RotateRight90 => self.process_rotate(RotationDirection::Right),
+            MazeRunnerRequest::GetButtonsState => self.process_buttons(),
         };
 
         self.response_tx
@@ -139,5 +148,15 @@ impl<const R: usize, const C: usize> SimEnvironment<R, C> {
         }
 
         MazeRunnerResponse::Ack
+    }
+
+    fn process_buttons(&self) -> MazeRunnerResponse {
+        let mut buttons = self.buttons.lock().unwrap();
+
+        let response = buttons.clone();
+
+        buttons.remove(ButtonsState::all());
+
+        MazeRunnerResponse::Buttons(response)
     }
 }

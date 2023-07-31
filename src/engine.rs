@@ -3,6 +3,7 @@ use pix_engine::prelude::*;
 use std::sync::{Arc, Mutex};
 
 use crate::{
+    communication::ButtonsState,
     maze::{Maze, Posts},
     panel::SimPanel,
     position::Position,
@@ -22,12 +23,16 @@ pub struct SimEngine<const R: usize, const C: usize> {
 }
 
 impl<const R: usize, const C: usize> SimEngine<R, C> {
-    pub fn new(maze: Maze<R, C>, runner_position: Arc<Mutex<Position<R>>>) -> Self {
+    pub fn new(
+        maze: Maze<R, C>,
+        runner_position: Arc<Mutex<Position<R>>>,
+        buttons: Arc<Mutex<ButtonsState>>,
+    ) -> Self {
         Self {
             maze,
             posts: Posts {},
             runner_position,
-            panel: SimPanel {},
+            panel: SimPanel::new(buttons),
         }
     }
 }
