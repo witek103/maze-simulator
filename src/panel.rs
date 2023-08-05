@@ -5,6 +5,7 @@ use pix_engine::{prelude::Color, rect, state::PixState};
 
 use crate::{
     communication::ButtonsState,
+    distance_sensors::DistanceSensorsReading,
     engine::Render,
     simulator::{APP_HEIGHT, APP_WIDTH, PANEL_WIDTH},
 };
@@ -14,17 +15,98 @@ pub const PANEL_X_OFFSET: i32 = APP_WIDTH as i32 - PANEL_WIDTH;
 
 pub struct SimPanel {
     buttons: Arc<Mutex<ButtonsState>>,
+    distance_sensors: Arc<Mutex<DistanceSensorsReading>>,
 }
 
 impl SimPanel {
-    pub fn new(buttons: Arc<Mutex<ButtonsState>>) -> Self {
-        Self { buttons }
+    pub fn new(
+        buttons: Arc<Mutex<ButtonsState>>,
+        distance_sensors: Arc<Mutex<DistanceSensorsReading>>,
+    ) -> Self {
+        Self {
+            buttons,
+            distance_sensors,
+        }
     }
 
     pub fn button_pressed(&self, button: ButtonsState) {
         let mut buttons_state = self.buttons.lock().unwrap();
 
         buttons_state.set(button, true);
+    }
+
+    fn draw_sensor_readings(&self, s: &mut PixState) -> Result<()> {
+        let x_offset = PANEL_X_OFFSET + 10;
+        let y_offset = 100;
+        let x_padding = 40;
+        let y_padding = 20;
+        let bar_width = 10;
+
+        let distance_sensors = self.distance_sensors.lock().unwrap().clone();
+
+        s.set_cursor_pos([x_offset, y_offset]);
+        s.fill(Color::BLACK);
+        s.stroke(None);
+
+        s.text(format!("DL:"))?;
+
+        s.set_cursor_pos([x_offset + x_padding, y_offset]);
+
+        s.text(format!("{}", distance_sensors.dl))?;
+
+        s.set_cursor_pos([x_offset, y_offset + y_padding]);
+
+        s.text(format!("FL:"))?;
+
+        s.set_cursor_pos([x_offset + x_padding, y_offset + y_padding]);
+
+        s.text(format!("{}", distance_sensors.fl))?;
+
+        s.set_cursor_pos([x_offset, y_offset + y_padding * 2]);
+
+        s.text(format!("FR:"))?;
+
+        s.set_cursor_pos([x_offset + x_padding, y_offset + y_padding * 2]);
+
+        s.text(format!("{}", distance_sensors.fr))?;
+
+        s.set_cursor_pos([x_offset, y_offset + y_padding * 3]);
+
+        s.text(format!("DR:"))?;
+
+        s.set_cursor_pos([x_offset + x_padding, y_offset + y_padding * 3]);
+
+        s.text(format!("{}", distance_sensors.dr))?;
+
+        s.rect(rect![
+            x_offset + x_padding * 2,
+            y_offset + 5,
+            distance_sensors.dl / 2,
+            bar_width,
+        ])?;
+
+        s.rect(rect![
+            x_offset + x_padding * 2,
+            y_offset + y_padding + 5,
+            distance_sensors.fl / 2,
+            bar_width,
+        ])?;
+
+        s.rect(rect![
+            x_offset + x_padding * 2,
+            y_offset + y_padding * 2 + 5,
+            distance_sensors.fr / 2,
+            bar_width,
+        ])?;
+
+        s.rect(rect![
+            x_offset + x_padding * 2,
+            y_offset + y_padding * 3 + 5,
+            distance_sensors.dr / 2,
+            bar_width,
+        ])?;
+
+        Ok(())
     }
 
     fn draw_buttons(&self, s: &mut PixState) -> Result<()> {
@@ -59,6 +141,7 @@ impl SimPanel {
         if s.button("BTN4")? {
             self.button_pressed(ButtonsState::Button4);
         }
+
         Ok(())
     }
 }
@@ -79,6 +162,9 @@ impl Render for SimPanel {
         ])?;
 
         self.draw_buttons(s)?;
+
+        self.draw_sensor_readings(s)?;
+
         Ok(())
     }
 }

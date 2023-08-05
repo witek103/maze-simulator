@@ -2,7 +2,10 @@ use anyhow::Result;
 use pix_engine::prelude::*;
 use std::sync::{Arc, Mutex};
 
-use crate::{communication::ButtonsState, maze::Posts, panel::SimPanel};
+use crate::{
+    communication::ButtonsState, distance_sensors::DistanceSensorsReading, maze::Posts,
+    panel::SimPanel,
+};
 
 pub trait Render {
     fn draw<C>(&self, s: &mut PixState, primary_color: C, secondary_color: C) -> Result<()>
@@ -29,12 +32,13 @@ where
         runner_position: Arc<Mutex<U>>,
         buttons: Arc<Mutex<ButtonsState>>,
         runner_context: Arc<Mutex<T>>,
+        distance_sensors: Arc<Mutex<DistanceSensorsReading>>,
     ) -> Self {
         Self {
             maze,
             posts: Posts {},
             runner_position,
-            panel: SimPanel::new(buttons),
+            panel: SimPanel::new(buttons, distance_sensors),
             runner_context,
         }
     }

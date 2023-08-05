@@ -2,7 +2,14 @@ use pix_engine::prelude::Engine;
 use std::{sync::mpsc, thread};
 
 use crate::{
-    communication::SimCommunication, engine::SimEngine, environment::SimEnvironment, maze::Maze,
+    communication::SimCommunication,
+    distance_sensors::{
+        DistanceSensorDiagonalLeft, DistanceSensorDiagonalRight, DistanceSensorFrontLeft,
+        DistanceSensorFrontRight, DistanceSensorsEnvironment,
+    },
+    engine::SimEngine,
+    environment::SimEnvironment,
+    maze::Maze,
     COLS, ROWS,
 };
 
@@ -33,6 +40,7 @@ impl<const R: usize, const C: usize> MazeSimulator<R, C> {
         let runner_position = environment.get_runner_position_handle();
         let buttons = environment.get_buttons_handle();
         let runner_context = environment.get_runner_context_handle();
+        let distance_sensors = environment.get_distance_sensors_handle();
 
         let _ = thread::spawn(move || environment.process().unwrap());
 
@@ -40,8 +48,28 @@ impl<const R: usize, const C: usize> MazeSimulator<R, C> {
 
         let _ = thread::spawn(move || communication.process().unwrap());
 
-        let mut engine =
-            SimEngine::<R, C, _, _, _>::new(maze, runner_position, buttons, runner_context);
+        let distance_senors_environment = DistanceSensorsEnvironment::<
+            R,
+            C,
+            DistanceSensorFrontLeft,
+            DistanceSensorFrontRight,
+            DistanceSensorDiagonalLeft,
+            DistanceSensorDiagonalRight,
+        >::new(
+            maze.clone(),
+            runner_position.clone(),
+            distance_sensors.clone(),
+        );
+
+        let _ = thread::spawn(move || distance_senors_environment.process().unwrap());
+
+        let mut engine = SimEngine::<R, C, _, _, _>::new(
+            maze,
+            runner_position,
+            buttons,
+            runner_context,
+            distance_sensors,
+        );
 
         let mut pix_engine = Engine::builder()
             .dimensions(APP_WIDTH + 1, APP_HEIGHT + 1)

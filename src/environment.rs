@@ -11,6 +11,7 @@ use std::{
 use crate::{
     communication::{ButtonsState, MazeRunnerRequest, MazeRunnerResponse},
     context::RunnerContext,
+    distance_sensors::DistanceSensorsReading,
     maze::{Cell, CellState, Maze},
     position::{Angle, Position},
     runner::{MazerRunner, RotationDirection, SensorDirection},
@@ -27,6 +28,7 @@ pub struct SimEnvironment<const R: usize, const C: usize> {
     runner: MazerRunner<R, C>,
     buttons: Arc<Mutex<ButtonsState>>,
     runner_context: Arc<Mutex<RunnerContext<R, C>>>,
+    distance_sensors: Arc<Mutex<DistanceSensorsReading>>,
 }
 
 impl<const R: usize, const C: usize> SimEnvironment<R, C> {
@@ -41,6 +43,13 @@ impl<const R: usize, const C: usize> SimEnvironment<R, C> {
 
         let runner_position = Arc::new(Mutex::new(runner_position));
 
+        let distance_sensors = Arc::new(Mutex::new(DistanceSensorsReading {
+            fl: -1,
+            fr: -1,
+            dl: -1,
+            dr: -1,
+        }));
+
         let buttons = Arc::new(Mutex::new(ButtonsState::default()));
 
         let runner_context = Arc::new(Mutex::new(RunnerContext::new()));
@@ -53,6 +62,7 @@ impl<const R: usize, const C: usize> SimEnvironment<R, C> {
             runner,
             buttons,
             runner_context,
+            distance_sensors,
         })
     }
 
@@ -76,6 +86,10 @@ impl<const R: usize, const C: usize> SimEnvironment<R, C> {
 
     pub fn get_runner_context_handle(&self) -> Arc<Mutex<RunnerContext<R, C>>> {
         self.runner_context.clone()
+    }
+
+    pub fn get_distance_sensors_handle(&self) -> Arc<Mutex<DistanceSensorsReading>> {
+        self.distance_sensors.clone()
     }
 
     fn process_request(&mut self, request: MazeRunnerRequest) -> Result<()> {

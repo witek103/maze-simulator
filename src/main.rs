@@ -1,5 +1,6 @@
 mod communication;
 mod context;
+mod distance_sensors;
 mod engine;
 mod environment;
 mod maze;
