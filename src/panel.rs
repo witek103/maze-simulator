@@ -26,23 +26,8 @@ impl SimPanel {
 
         buttons_state.set(button, true);
     }
-}
 
-impl Render for SimPanel {
-    fn draw<T>(&self, s: &mut PixState, primary_color: T, secondary_color: T) -> Result<()>
-    where
-        T: Into<Option<Color>>,
-    {
-        s.stroke(secondary_color);
-        s.fill(primary_color);
-
-        s.rect(rect![
-            PANEL_X_OFFSET,
-            PANEL_Y_OFFSET,
-            PANEL_WIDTH,
-            APP_HEIGHT as i32,
-        ])?;
-
+    fn draw_buttons(&self, s: &mut PixState) -> Result<()> {
         s.set_cursor_pos([PANEL_X_OFFSET + 10, 5]);
         s.fill(Color::BLACK);
         s.stroke(None);
@@ -50,12 +35,11 @@ impl Render for SimPanel {
         s.text(format!("Runner buttons:"))?;
 
         s.set_cursor_pos([PANEL_X_OFFSET + 10, 30]);
-        s.fill(Color::WHITE);
-        s.stroke(None);
 
         if s.button("Reset")? {
             self.button_pressed(ButtonsState::Reset);
         }
+
         s.same_line(None);
         if s.button("BTN1")? {
             self.button_pressed(ButtonsState::Button1);
@@ -75,7 +59,26 @@ impl Render for SimPanel {
         if s.button("BTN4")? {
             self.button_pressed(ButtonsState::Button4);
         }
+        Ok(())
+    }
+}
 
+impl Render for SimPanel {
+    fn draw<T>(&self, s: &mut PixState, primary_color: T, secondary_color: T) -> Result<()>
+    where
+        T: Into<Option<Color>>,
+    {
+        s.stroke(secondary_color);
+        s.fill(primary_color);
+
+        s.rect(rect![
+            PANEL_X_OFFSET,
+            PANEL_Y_OFFSET,
+            PANEL_WIDTH,
+            APP_HEIGHT as i32,
+        ])?;
+
+        self.draw_buttons(s)?;
         Ok(())
     }
 }
