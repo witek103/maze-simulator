@@ -4,10 +4,10 @@ use std::{sync::mpsc, thread};
 
 use crate::{communication::SimCommunication, engine::SimEngine, maze::Maze, COLS, ROWS};
 
-const RATIO_VIS_MM: i32 = 4;
+pub const RATIO_VIS_MM: i32 = 4;
 
-const CELL_SIZE_MM: i32 = 180;
-const WALL_WIDTH_MM: i32 = 12;
+pub const CELL_SIZE_MM: i32 = 180;
+pub const WALL_WIDTH_MM: i32 = 12;
 
 pub const CELL_SIZE_VIS: i32 = CELL_SIZE_MM / RATIO_VIS_MM;
 pub const WALL_WIDTH_VIS: i32 = WALL_WIDTH_MM / RATIO_VIS_MM;

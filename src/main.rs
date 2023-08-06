@@ -2,6 +2,7 @@ mod communication;
 mod engine;
 mod maze;
 mod mazefile;
+mod position;
 mod simulator;
 
 use anyhow::Result;
