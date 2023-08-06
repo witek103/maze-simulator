@@ -13,6 +13,12 @@ pub enum MazeOrientation {
     West,
 }
 
+pub enum SensorDirection {
+    Front,
+    Left,
+    Right,
+}
+
 pub struct MazerRunner<const R: usize, const C: usize> {
     cell: Cell<R, C>,
     orientation: MazeOrientation,
@@ -53,5 +59,31 @@ impl<const R: usize, const C: usize> MazerRunner<R, C> {
         };
 
         Position::new(x, y, theta)
+    }
+
+    pub fn is_wall_detected(&self, maze: &Maze<R, C>, direction: SensorDirection) -> bool {
+        let cell_state = maze.get_cell_state(self.cell);
+
+        match direction {
+            SensorDirection::Front => match self.orientation {
+                MazeOrientation::East => cell_state.contains(CellState::EastWall),
+                MazeOrientation::North => cell_state.contains(CellState::NorthWall),
+                MazeOrientation::West => cell_state.contains(CellState::WestWall),
+                MazeOrientation::South => cell_state.contains(CellState::SouthWall),
+            },
+
+            SensorDirection::Left => match self.orientation {
+                MazeOrientation::East => cell_state.contains(CellState::NorthWall),
+                MazeOrientation::North => cell_state.contains(CellState::WestWall),
+                MazeOrientation::West => cell_state.contains(CellState::SouthWall),
+                MazeOrientation::South => cell_state.contains(CellState::EastWall),
+            },
+            SensorDirection::Right => match self.orientation {
+                MazeOrientation::East => cell_state.contains(CellState::SouthWall),
+                MazeOrientation::North => cell_state.contains(CellState::EastWall),
+                MazeOrientation::West => cell_state.contains(CellState::NorthWall),
+                MazeOrientation::South => cell_state.contains(CellState::WestWall),
+            },
+        }
     }
 }

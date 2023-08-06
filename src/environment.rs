@@ -8,7 +8,7 @@ use crate::{
     communication::{MazeRunnerRequest, MazeRunnerResponse},
     maze::Maze,
     position::{Angle, Position},
-    runner::MazerRunner,
+    runner::{MazerRunner, SensorDirection},
 };
 
 pub struct SimEnvironment<const R: usize, const C: usize> {
@@ -59,6 +59,18 @@ impl<const R: usize, const C: usize> SimEnvironment<R, C> {
 
         let response = match request {
             MazeRunnerRequest::Initialize => self.process_initialize()?,
+            MazeRunnerRequest::GetWallFront => MazeRunnerResponse::WallDetected(
+                self.runner
+                    .is_wall_detected(&self.maze, SensorDirection::Front),
+            ),
+            MazeRunnerRequest::GetWallLeft => MazeRunnerResponse::WallDetected(
+                self.runner
+                    .is_wall_detected(&self.maze, SensorDirection::Left),
+            ),
+            MazeRunnerRequest::GetWallRight => MazeRunnerResponse::WallDetected(
+                self.runner
+                    .is_wall_detected(&self.maze, SensorDirection::Right),
+            ),
             _ => MazeRunnerResponse::Error,
         };
 
