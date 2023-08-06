@@ -6,6 +6,8 @@ use std::io::prelude::*;
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::sync::mpsc::{Receiver, Sender};
 
+use crate::maze::CellState;
+
 const SOCKET: &str = "/tmp/micromouse_simulator_socket";
 
 bitflags! {
@@ -30,6 +32,20 @@ pub enum MazeRunnerRequest {
     GetWallRight,
     GetWallLeft,
     GetButtonsState,
+    UpdateCellState {
+        x: usize,
+        y: usize,
+        state: CellState,
+    },
+    ClearCell {
+        x: usize,
+        y: usize,
+    },
+    UpdateCellValue {
+        x: usize,
+        y: usize,
+        value: i32,
+    },
 }
 
 #[derive(Serialize, Deserialize, Debug)]

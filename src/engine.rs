@@ -12,32 +12,35 @@ use crate::{
 pub trait Render {
     fn draw<C>(&self, s: &mut PixState, primary_color: C, secondary_color: C) -> Result<()>
     where
-        C: Into<Option<Color>>;
+        C: Into<Option<Color>> + std::marker::Copy;
 }
 
-pub struct SimEngine<const R: usize, const C: usize> {
+pub struct SimEngine<const R: usize, const C: usize, T> {
     posts: Posts<R, C>,
     maze: Maze<R, C>,
     runner_position: Arc<Mutex<Position<R>>>,
     panel: SimPanel,
+    runner_context: Arc<Mutex<T>>,
 }
 
-impl<const R: usize, const C: usize> SimEngine<R, C> {
+impl<const R: usize, const C: usize, T: Render> SimEngine<R, C, T> {
     pub fn new(
         maze: Maze<R, C>,
         runner_position: Arc<Mutex<Position<R>>>,
         buttons: Arc<Mutex<ButtonsState>>,
+        runner_context: Arc<Mutex<T>>,
     ) -> Self {
         Self {
             maze,
             posts: Posts {},
             runner_position,
             panel: SimPanel::new(buttons),
+            runner_context,
         }
     }
 }
 
-impl<const R: usize, const C: usize> PixEngine for SimEngine<R, C> {
+impl<const R: usize, const C: usize, T: Render> PixEngine for SimEngine<R, C, T> {
     fn on_start(&mut self, s: &mut PixState) -> PixResult<()> {
         s.background(Color::BLACK);
 
@@ -49,6 +52,11 @@ impl<const R: usize, const C: usize> PixEngine for SimEngine<R, C> {
 
         self.posts.draw(s, Color::DIM_GRAY, Color::DARK_GRAY)?;
         self.maze.draw(s, Color::DIM_GRAY, Color::DARK_GRAY)?;
+
+        self.runner_context
+            .lock()
+            .unwrap()
+            .draw(s, Color::RED, Color::DARK_GRAY)?;
 
         {
             self.runner_position

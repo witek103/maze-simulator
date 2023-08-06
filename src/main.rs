@@ -1,4 +1,5 @@
 mod communication;
+mod context;
 mod engine;
 mod environment;
 mod maze;

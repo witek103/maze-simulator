@@ -160,7 +160,7 @@ impl<const R: usize, const C: usize> Maze<R, C> {
 impl<const R: usize, const C: usize> Render for Maze<R, C> {
     fn draw<T>(&self, s: &mut PixState, primary_color: T, secondary_color: T) -> Result<()>
     where
-        T: Into<Option<Color>>,
+        T: Into<Option<Color>> + std::marker::Copy,
     {
         s.stroke(secondary_color);
         s.fill(primary_color);
@@ -170,6 +170,21 @@ impl<const R: usize, const C: usize> Render for Maze<R, C> {
                 let cell =
                     Cell::new(x as usize, y as usize).context("Coordinates should be in bounds")?;
                 let cell_state = self.get_cell_state(cell);
+
+                if cell_state.contains(CellState::Visited) {
+                    s.stroke(None);
+                    s.fill(Color::rgb(0x10, 0x10, 0x10));
+
+                    s.rect(rect![
+                        x * CELL_SIZE_VIS + WALL_WIDTH_VIS + 1,
+                        (R as i32 - y - 1) * CELL_SIZE_VIS + WALL_WIDTH_VIS + 1,
+                        WALL_LENGTH_VIS - 2,
+                        WALL_LENGTH_VIS - 2,
+                    ])?;
+
+                    s.stroke(secondary_color);
+                    s.fill(primary_color);
+                }
 
                 if cell_state.contains(CellState::NorthWall) {
                     s.rect(rect![

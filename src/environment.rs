@@ -10,7 +10,8 @@ use std::{
 
 use crate::{
     communication::{ButtonsState, MazeRunnerRequest, MazeRunnerResponse},
-    maze::Maze,
+    context::RunnerContext,
+    maze::{Cell, CellState, Maze},
     position::{Angle, Position},
     runner::{MazerRunner, RotationDirection, SensorDirection},
 };
@@ -25,6 +26,7 @@ pub struct SimEnvironment<const R: usize, const C: usize> {
     runner_position: Arc<Mutex<Position<R>>>,
     runner: MazerRunner<R, C>,
     buttons: Arc<Mutex<ButtonsState>>,
+    runner_context: Arc<Mutex<RunnerContext<R, C>>>,
 }
 
 impl<const R: usize, const C: usize> SimEnvironment<R, C> {
@@ -41,6 +43,8 @@ impl<const R: usize, const C: usize> SimEnvironment<R, C> {
 
         let buttons = Arc::new(Mutex::new(ButtonsState::default()));
 
+        let runner_context = Arc::new(Mutex::new(RunnerContext::new()));
+
         Ok(Self {
             maze,
             request_rx,
@@ -48,6 +52,7 @@ impl<const R: usize, const C: usize> SimEnvironment<R, C> {
             runner_position,
             runner,
             buttons,
+            runner_context,
         })
     }
 
@@ -67,6 +72,10 @@ impl<const R: usize, const C: usize> SimEnvironment<R, C> {
 
     pub fn get_buttons_handle(&self) -> Arc<Mutex<ButtonsState>> {
         self.buttons.clone()
+    }
+
+    pub fn get_runner_context_handle(&self) -> Arc<Mutex<RunnerContext<R, C>>> {
+        self.runner_context.clone()
     }
 
     fn process_request(&mut self, request: MazeRunnerRequest) -> Result<()> {
@@ -90,6 +99,14 @@ impl<const R: usize, const C: usize> SimEnvironment<R, C> {
             MazeRunnerRequest::RotateLeft90 => self.process_rotate(RotationDirection::Left),
             MazeRunnerRequest::RotateRight90 => self.process_rotate(RotationDirection::Right),
             MazeRunnerRequest::GetButtonsState => self.process_buttons(),
+            MazeRunnerRequest::UpdateCellState { x, y, state } => {
+                self.process_update_cell_state(x, y, state)
+            }
+
+            MazeRunnerRequest::ClearCell { x, y } => self.process_clear_cell(x, y),
+            MazeRunnerRequest::UpdateCellValue { x, y, value } => {
+                self.process_update_cell_value(x, y, value)
+            }
         };
 
         self.response_tx
@@ -158,5 +175,49 @@ impl<const R: usize, const C: usize> SimEnvironment<R, C> {
         buttons.remove(ButtonsState::all());
 
         MazeRunnerResponse::Buttons(response)
+    }
+
+    fn process_clear_cell(&mut self, x: usize, y: usize) -> MazeRunnerResponse {
+        let cell = match Cell::new(x, y) {
+            Ok(cell) => cell,
+            Err(_) => return MazeRunnerResponse::Error,
+        };
+
+        self.runner_context.lock().unwrap().clear_cell(cell);
+
+        MazeRunnerResponse::Ack
+    }
+
+    fn process_update_cell_state(
+        &mut self,
+        x: usize,
+        y: usize,
+        state: CellState,
+    ) -> MazeRunnerResponse {
+        let cell = match Cell::new(x, y) {
+            Ok(cell) => cell,
+            Err(_) => return MazeRunnerResponse::Error,
+        };
+
+        self.runner_context
+            .lock()
+            .unwrap()
+            .set_cell_state(cell, state);
+
+        MazeRunnerResponse::Ack
+    }
+
+    fn process_update_cell_value(&mut self, x: usize, y: usize, value: i32) -> MazeRunnerResponse {
+        let cell = match Cell::new(x, y) {
+            Ok(cell) => cell,
+            Err(_) => return MazeRunnerResponse::Error,
+        };
+
+        self.runner_context
+            .lock()
+            .unwrap()
+            .set_cell_value(cell, value);
+
+        MazeRunnerResponse::Ack
     }
 }

@@ -28,10 +28,11 @@ impl<const R: usize, const C: usize> MazeSimulator<R, C> {
         let (request_tx, request_rx) = mpsc::channel();
         let (response_tx, response_rx) = mpsc::channel();
 
-        let environment = SimEnvironment::<R, C>::new(maze.clone(), request_rx, response_tx)?;
+        let environment = SimEnvironment::new(maze.clone(), request_rx, response_tx)?;
 
         let runner_position = environment.get_runner_position_handle();
         let buttons = environment.get_buttons_handle();
+        let runner_context = environment.get_runner_context_handle();
 
         let _ = thread::spawn(move || environment.process().unwrap());
 
@@ -39,7 +40,7 @@ impl<const R: usize, const C: usize> MazeSimulator<R, C> {
 
         let _ = thread::spawn(move || communication.process().unwrap());
 
-        let mut engine = SimEngine::new(maze, runner_position, buttons);
+        let mut engine = SimEngine::new(maze, runner_position, buttons, runner_context);
 
         let mut pix_engine = Engine::builder()
             .dimensions(APP_WIDTH + 1, APP_HEIGHT + 1)
