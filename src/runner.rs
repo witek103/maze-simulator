@@ -86,4 +86,19 @@ impl<const R: usize, const C: usize> MazerRunner<R, C> {
             },
         }
     }
+
+    pub fn move_forward(&mut self, maze: &Maze<R, C>) -> Result<()> {
+        if self.is_wall_detected(maze, SensorDirection::Front) {
+            bail!("Wall in front of Runner");
+        }
+
+        match self.orientation {
+            MazeOrientation::North => self.cell.y += 1,
+            MazeOrientation::East => self.cell.x += 1,
+            MazeOrientation::South => self.cell.y -= 1,
+            MazeOrientation::West => self.cell.x -= 1,
+        }
+
+        Ok(())
+    }
 }

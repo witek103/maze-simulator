@@ -1,7 +1,11 @@
 use anyhow::{anyhow, Context, Result};
-use std::sync::{
-    mpsc::{Receiver, Sender, TryRecvError},
-    Arc, Mutex,
+use std::{
+    sync::{
+        mpsc::{Receiver, Sender, TryRecvError},
+        Arc, Mutex,
+    },
+    thread::sleep,
+    time::Duration,
 };
 
 use crate::{
@@ -10,6 +14,8 @@ use crate::{
     position::{Angle, Position},
     runner::{MazerRunner, SensorDirection},
 };
+
+const MOVEMENT_TIME: usize = 400;
 
 pub struct SimEnvironment<const R: usize, const C: usize> {
     maze: Maze<R, C>,
@@ -71,6 +77,7 @@ impl<const R: usize, const C: usize> SimEnvironment<R, C> {
                 self.runner
                     .is_wall_detected(&self.maze, SensorDirection::Right),
             ),
+            MazeRunnerRequest::MoveForward => self.process_move_forward(),
             _ => MazeRunnerResponse::Error,
         };
 
@@ -87,5 +94,29 @@ impl<const R: usize, const C: usize> SimEnvironment<R, C> {
         *runner_position = self.runner.get_real_position();
 
         Ok(MazeRunnerResponse::Ack)
+    }
+
+    fn process_move_forward(&mut self) -> MazeRunnerResponse {
+        if self.runner.move_forward(&self.maze).is_err() {
+            return MazeRunnerResponse::Error;
+        }
+
+        let next_position = self.runner.get_real_position();
+
+        let position = self.runner_position.lock().unwrap().clone();
+
+        let x_step = (next_position.x - position.x) / MOVEMENT_TIME as f64;
+        let y_step = (next_position.y - position.y) / MOVEMENT_TIME as f64;
+
+        for _ in 1..MOVEMENT_TIME + 1 {
+            sleep(Duration::from_millis(1));
+
+            let mut runner_position = self.runner_position.lock().unwrap();
+
+            runner_position.x += x_step;
+            runner_position.y += y_step;
+        }
+
+        MazeRunnerResponse::Ack
     }
 }
