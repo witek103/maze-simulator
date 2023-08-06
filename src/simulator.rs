@@ -25,7 +25,7 @@ impl<const R: usize, const C: usize> MazeSimulator<R, C> {
         let (request_tx, request_rx) = mpsc::channel();
         let (response_tx, response_rx) = mpsc::channel();
 
-        let environment = SimEnvironment::<R, C>::new(request_rx, response_tx)?;
+        let environment = SimEnvironment::<R, C>::new(maze.clone(), request_rx, response_tx)?;
 
         let runner_position = environment.get_runner_position_handle();
 

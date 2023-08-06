@@ -24,8 +24,8 @@ bitflags! {
 
 #[derive(Copy, Clone, PartialEq)]
 pub struct Cell<const R: usize, const C: usize> {
-    x: usize,
-    y: usize,
+    pub x: usize,
+    pub y: usize,
 }
 
 impl<const R: usize, const C: usize> Cell<R, C> {
@@ -96,6 +96,7 @@ impl<const R: usize, const C: usize> Goal<R, C> {
     }
 }
 
+#[derive(Clone)]
 pub struct Maze<const R: usize, const C: usize> {
     map: [[CellState; R]; C],
     goal: Goal<R, C>,
@@ -149,6 +150,10 @@ impl<const R: usize, const C: usize> Maze<R, C> {
 
     pub fn set_start_cell(&mut self, cell: Cell<R, C>) {
         self.start = cell;
+    }
+
+    pub fn get_start_cell(&self) -> Cell<R, C> {
+        self.start
     }
 }
 

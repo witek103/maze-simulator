@@ -4,6 +4,7 @@ mod environment;
 mod maze;
 mod mazefile;
 mod position;
+mod runner;
 mod simulator;
 
 use anyhow::Result;
