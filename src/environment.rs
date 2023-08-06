@@ -48,7 +48,16 @@ impl<const R: usize, const C: usize> SimEnvironment<R, C> {
     fn process_request(&mut self, request: MazeRunnerRequest) -> Result<()> {
         println!("{:?}", request);
 
-        let response = MazeRunnerResponse::Error;
+        let response = match request {
+            MazeRunnerRequest::Initialize => {
+                let mut runner_position = self.runner_position.lock().unwrap();
+
+                *runner_position = Position::new(90.0, 90.0, Angle::degrees(90.0));
+
+                MazeRunnerResponse::Ack
+            }
+            _ => MazeRunnerResponse::Error,
+        };
 
         self.response_tx
             .send(response)
