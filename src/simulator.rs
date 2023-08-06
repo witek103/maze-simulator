@@ -40,7 +40,8 @@ impl<const R: usize, const C: usize> MazeSimulator<R, C> {
 
         let _ = thread::spawn(move || communication.process().unwrap());
 
-        let mut engine = SimEngine::new(maze, runner_position, buttons, runner_context);
+        let mut engine =
+            SimEngine::<R, C, _, _, _>::new(maze, runner_position, buttons, runner_context);
 
         let mut pix_engine = Engine::builder()
             .dimensions(APP_WIDTH + 1, APP_HEIGHT + 1)

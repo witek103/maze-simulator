@@ -2,12 +2,7 @@ use anyhow::Result;
 use pix_engine::prelude::*;
 use std::sync::{Arc, Mutex};
 
-use crate::{
-    communication::ButtonsState,
-    maze::{Maze, Posts},
-    panel::SimPanel,
-    position::Position,
-};
+use crate::{communication::ButtonsState, maze::Posts, panel::SimPanel};
 
 pub trait Render {
     fn draw<C>(&self, s: &mut PixState, primary_color: C, secondary_color: C) -> Result<()>
@@ -15,18 +10,23 @@ pub trait Render {
         C: Into<Option<Color>> + std::marker::Copy;
 }
 
-pub struct SimEngine<const R: usize, const C: usize, T> {
+pub struct SimEngine<const R: usize, const C: usize, T, S, U> {
     posts: Posts<R, C>,
-    maze: Maze<R, C>,
-    runner_position: Arc<Mutex<Position<R>>>,
+    maze: S,
+    runner_position: Arc<Mutex<U>>,
     panel: SimPanel,
     runner_context: Arc<Mutex<T>>,
 }
 
-impl<const R: usize, const C: usize, T: Render> SimEngine<R, C, T> {
+impl<const R: usize, const C: usize, T, S, U> SimEngine<R, C, T, S, U>
+where
+    T: Render,
+    S: Render,
+    U: Render,
+{
     pub fn new(
-        maze: Maze<R, C>,
-        runner_position: Arc<Mutex<Position<R>>>,
+        maze: S,
+        runner_position: Arc<Mutex<U>>,
         buttons: Arc<Mutex<ButtonsState>>,
         runner_context: Arc<Mutex<T>>,
     ) -> Self {
@@ -40,7 +40,12 @@ impl<const R: usize, const C: usize, T: Render> SimEngine<R, C, T> {
     }
 }
 
-impl<const R: usize, const C: usize, T: Render> PixEngine for SimEngine<R, C, T> {
+impl<const R: usize, const C: usize, T, S, U> PixEngine for SimEngine<R, C, T, S, U>
+where
+    T: Render,
+    S: Render,
+    U: Render,
+{
     fn on_start(&mut self, s: &mut PixState) -> PixResult<()> {
         s.background(Color::BLACK);
 
@@ -58,12 +63,10 @@ impl<const R: usize, const C: usize, T: Render> PixEngine for SimEngine<R, C, T>
             .unwrap()
             .draw(s, Color::RED, Color::DARK_GRAY)?;
 
-        {
-            self.runner_position
-                .lock()
-                .unwrap()
-                .draw(s, Color::DARK_GREEN, Color::LIGHT_GREEN)?;
-        }
+        self.runner_position
+            .lock()
+            .unwrap()
+            .draw(s, Color::DARK_GREEN, Color::LIGHT_GREEN)?;
 
         self.panel.draw(s, Color::DIM_GRAY, Color::DARK_GRAY)?;
 
