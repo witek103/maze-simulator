@@ -19,6 +19,12 @@ pub enum SensorDirection {
     Right,
 }
 
+#[derive(Copy, Clone)]
+pub enum RotationDirection {
+    Left,
+    Right,
+}
+
 pub struct MazerRunner<const R: usize, const C: usize> {
     cell: Cell<R, C>,
     orientation: MazeOrientation,
@@ -100,5 +106,22 @@ impl<const R: usize, const C: usize> MazerRunner<R, C> {
         }
 
         Ok(())
+    }
+
+    pub fn rotate(&mut self, direction: RotationDirection) {
+        self.orientation = match direction {
+            RotationDirection::Left => match self.orientation {
+                MazeOrientation::East => MazeOrientation::North,
+                MazeOrientation::North => MazeOrientation::West,
+                MazeOrientation::West => MazeOrientation::South,
+                MazeOrientation::South => MazeOrientation::East,
+            },
+            RotationDirection::Right => match self.orientation {
+                MazeOrientation::East => MazeOrientation::South,
+                MazeOrientation::North => MazeOrientation::East,
+                MazeOrientation::West => MazeOrientation::North,
+                MazeOrientation::South => MazeOrientation::West,
+            },
+        };
     }
 }

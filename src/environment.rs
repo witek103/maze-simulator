@@ -12,10 +12,11 @@ use crate::{
     communication::{MazeRunnerRequest, MazeRunnerResponse},
     maze::Maze,
     position::{Angle, Position},
-    runner::{MazerRunner, SensorDirection},
+    runner::{MazerRunner, RotationDirection, SensorDirection},
 };
 
 const MOVEMENT_TIME: usize = 400;
+const ROTATION_TIME: usize = 200;
 
 pub struct SimEnvironment<const R: usize, const C: usize> {
     maze: Maze<R, C>,
@@ -78,7 +79,8 @@ impl<const R: usize, const C: usize> SimEnvironment<R, C> {
                     .is_wall_detected(&self.maze, SensorDirection::Right),
             ),
             MazeRunnerRequest::MoveForward => self.process_move_forward(),
-            _ => MazeRunnerResponse::Error,
+            MazeRunnerRequest::RotateLeft90 => self.process_rotate(RotationDirection::Left),
+            MazeRunnerRequest::RotateRight90 => self.process_rotate(RotationDirection::Right),
         };
 
         self.response_tx
@@ -115,6 +117,25 @@ impl<const R: usize, const C: usize> SimEnvironment<R, C> {
 
             runner_position.x += x_step;
             runner_position.y += y_step;
+        }
+
+        MazeRunnerResponse::Ack
+    }
+
+    fn process_rotate(&mut self, direction: RotationDirection) -> MazeRunnerResponse {
+        self.runner.rotate(direction);
+
+        let r_step = match direction {
+            RotationDirection::Left => Angle::degrees(90.0),
+            RotationDirection::Right => Angle::degrees(-90.0),
+        } / ROTATION_TIME as f64;
+
+        for _ in 1..ROTATION_TIME + 1 {
+            sleep(Duration::from_millis(1));
+
+            let mut runner_position = self.runner_position.lock().unwrap();
+
+            runner_position.theta = runner_position.theta + r_step;
         }
 
         MazeRunnerResponse::Ack
