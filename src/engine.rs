@@ -4,7 +4,9 @@ use pix_engine::prelude::*;
 use crate::maze::{Maze, Posts};
 
 pub trait Render {
-    fn draw(&self, s: &mut PixState) -> Result<()>;
+    fn draw<C>(&self, s: &mut PixState, primary_color: C, secondary_color: C) -> Result<()>
+    where
+        C: Into<Option<Color>>;
 }
 
 pub struct SimEngine<const R: usize, const C: usize> {
@@ -31,11 +33,8 @@ impl<const R: usize, const C: usize> PixEngine for SimEngine<R, C> {
     fn on_update(&mut self, s: &mut PixState) -> PixResult<()> {
         s.clear()?;
 
-        s.stroke(Color::DARK_GRAY);
-        s.fill(Color::DIM_GRAY);
-
-        self.posts.draw(s)?;
-        self.maze.draw(s)?;
+        self.posts.draw(s, Color::DIM_GRAY, Color::DARK_GRAY)?;
+        self.maze.draw(s, Color::DIM_GRAY, Color::DARK_GRAY)?;
 
         Ok(())
     }

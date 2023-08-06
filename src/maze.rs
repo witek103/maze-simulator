@@ -1,6 +1,6 @@
 use anyhow::{anyhow, bail, Context, Result};
 use bitflags::bitflags;
-use pix_engine::{rect, state::PixState};
+use pix_engine::{prelude::Color, rect, state::PixState};
 
 use crate::{
     engine::Render,
@@ -151,7 +151,13 @@ impl<const R: usize, const C: usize> Maze<R, C> {
 }
 
 impl<const R: usize, const C: usize> Render for Maze<R, C> {
-    fn draw(&self, s: &mut PixState) -> Result<()> {
+    fn draw<T>(&self, s: &mut PixState, primary_color: T, secondary_color: T) -> Result<()>
+    where
+        T: Into<Option<Color>>,
+    {
+        s.stroke(secondary_color);
+        s.fill(primary_color);
+
         for y in 0..R as i32 {
             for x in 0..C as i32 {
                 let cell =
@@ -205,7 +211,13 @@ impl<const R: usize, const C: usize> Render for Maze<R, C> {
 }
 
 impl<const R: usize, const C: usize> Render for Posts<R, C> {
-    fn draw(&self, s: &mut PixState) -> Result<()> {
+    fn draw<T>(&self, s: &mut PixState, primary_color: T, secondary_color: T) -> Result<()>
+    where
+        T: Into<Option<Color>>,
+    {
+        s.stroke(secondary_color);
+        s.fill(primary_color);
+
         for y in 0..R as i32 {
             for x in 0..C as i32 {
                 s.rect(rect![
