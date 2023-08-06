@@ -1,5 +1,6 @@
 mod communication;
 mod engine;
+mod environment;
 mod maze;
 mod mazefile;
 mod position;
