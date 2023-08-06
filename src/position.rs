@@ -14,18 +14,15 @@ use crate::{
     simulator::{CELL_SIZE_MM, RATIO_VIS_MM, WALL_WIDTH_MM},
 };
 
-pub const RUNNER_SIZE_MM: i32 = 64;
+pub const RUNNER_SIZE_MM: f64 = 64.0;
 
 const RUNNER_SHAPE_VERTEXES: [[f64; 2]; 6] = [
-    [-(RUNNER_SIZE_MM as f64 / 2.0), RUNNER_SIZE_MM as f64 / 2.0],
-    [RUNNER_SIZE_MM as f64 / 2.0, RUNNER_SIZE_MM as f64 / 2.0],
-    [RUNNER_SIZE_MM as f64 / 1.5, RUNNER_SIZE_MM as f64 / 5.0],
-    [RUNNER_SIZE_MM as f64 / 1.5, -(RUNNER_SIZE_MM as f64 / 5.0)],
-    [RUNNER_SIZE_MM as f64 / 2.0, -(RUNNER_SIZE_MM as f64 / 2.0)],
-    [
-        -(RUNNER_SIZE_MM as f64 / 2.0),
-        -(RUNNER_SIZE_MM as f64 / 2.0),
-    ],
+    [-(RUNNER_SIZE_MM / 2.0), RUNNER_SIZE_MM / 2.0],
+    [RUNNER_SIZE_MM / 2.0, RUNNER_SIZE_MM / 2.0],
+    [RUNNER_SIZE_MM / 1.5, RUNNER_SIZE_MM / 5.0],
+    [RUNNER_SIZE_MM / 1.5, -(RUNNER_SIZE_MM / 5.0)],
+    [RUNNER_SIZE_MM / 2.0, -(RUNNER_SIZE_MM / 2.0)],
+    [-(RUNNER_SIZE_MM / 2.0), -(RUNNER_SIZE_MM / 2.0)],
 ];
 
 pub type Millimeters = f64;
