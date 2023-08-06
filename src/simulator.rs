@@ -27,13 +27,15 @@ impl<const R: usize, const C: usize> MazeSimulator<R, C> {
 
         let environment = SimEnvironment::<R, C>::new(request_rx, response_tx)?;
 
+        let runner_position = environment.get_runner_position_handle();
+
         let _ = thread::spawn(move || environment.process().unwrap());
 
         let communication = SimCommunication::new(request_tx, response_rx)?;
 
         let _ = thread::spawn(move || communication.process().unwrap());
 
-        let mut engine = SimEngine::new(maze);
+        let mut engine = SimEngine::new(maze, runner_position);
 
         let mut pix_engine = Engine::builder()
             .dimensions(APP_WIDTH + 1, APP_HEIGHT + 1)
