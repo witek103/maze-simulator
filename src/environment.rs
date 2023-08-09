@@ -9,7 +9,7 @@ use std::{
 };
 
 use crate::{
-    communication::{ButtonsState, MazeRunnerRequest, MazeRunnerResponse},
+    communication::{ButtonsState, DistanceSensor, MazeRunnerRequest, MazeRunnerResponse},
     context::RunnerContext,
     distance_sensors::DistanceSensorsReading,
     maze::{Cell, CellState, Maze},
@@ -115,6 +115,9 @@ impl<const R: usize, const C: usize> SimEnvironment<R, C> {
             MazeRunnerRequest::ClearCell { x, y } => self.process_clear_cell(x, y),
             MazeRunnerRequest::UpdateCellValue { x, y, value } => {
                 self.process_update_cell_value(x, y, value)
+            }
+            MazeRunnerRequest::GetDistanceReadout { sensor } => {
+                self.process_distance_readout(sensor)
             }
         };
 
@@ -228,5 +231,18 @@ impl<const R: usize, const C: usize> SimEnvironment<R, C> {
             .set_cell_value(cell, value);
 
         MazeRunnerResponse::Ack
+    }
+
+    fn process_distance_readout(&self, sensor: DistanceSensor) -> MazeRunnerResponse {
+        let distance_sensors = self.distance_sensors.lock().unwrap().clone();
+
+        let distance = match sensor {
+            DistanceSensor::FrontLeft => distance_sensors.fl,
+            DistanceSensor::FrontRight => distance_sensors.fr,
+            DistanceSensor::DiagonalLeft => distance_sensors.dl,
+            DistanceSensor::DiagonalRight => distance_sensors.dr,
+        };
+
+        MazeRunnerResponse::Distance(distance as u16)
     }
 }
