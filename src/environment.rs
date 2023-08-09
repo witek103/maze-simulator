@@ -9,16 +9,19 @@ use std::{
 };
 
 use crate::{
-    communication::{ButtonsState, DistanceSensor, MazeRunnerRequest, MazeRunnerResponse},
+    communication::{
+        ButtonsState, DistanceSensor, MazeRunnerRequest, MazeRunnerResponse, MotionReadout,
+    },
     context::RunnerContext,
     distance_sensors::DistanceSensorsReading,
     maze::{Cell, CellState, Maze},
     position::{Angle, Position},
     runner::{MazerRunner, RotationDirection, SensorDirection},
+    velocity::Velocity,
 };
 
-const MOVEMENT_TIME: usize = 400;
-const ROTATION_TIME: usize = 200;
+const TRANSLATIONAL_VELOCITY: f64 = 400.0; // 400.0 [mm/s]
+const ROTATIONAL_VELOCITY: f64 = 6.98131701; // ~400 [deg/s]
 
 pub struct SimEnvironment<const R: usize, const C: usize> {
     maze: Maze<R, C>,
@@ -29,6 +32,7 @@ pub struct SimEnvironment<const R: usize, const C: usize> {
     buttons: Arc<Mutex<ButtonsState>>,
     runner_context: Arc<Mutex<RunnerContext<R, C>>>,
     distance_sensors: Arc<Mutex<DistanceSensorsReading>>,
+    velocity: Arc<Mutex<Velocity>>,
 }
 
 impl<const R: usize, const C: usize> SimEnvironment<R, C> {
@@ -49,6 +53,8 @@ impl<const R: usize, const C: usize> SimEnvironment<R, C> {
 
         let runner_context = Arc::new(Mutex::new(RunnerContext::new()));
 
+        let velocity = Arc::new(Mutex::new(Velocity::new()));
+
         Ok(Self {
             maze,
             request_rx,
@@ -58,6 +64,7 @@ impl<const R: usize, const C: usize> SimEnvironment<R, C> {
             buttons,
             runner_context,
             distance_sensors,
+            velocity,
         })
     }
 
@@ -85,6 +92,10 @@ impl<const R: usize, const C: usize> SimEnvironment<R, C> {
 
     pub fn get_distance_sensors_handle(&self) -> Arc<Mutex<DistanceSensorsReading>> {
         self.distance_sensors.clone()
+    }
+
+    pub fn get_velocity_handle(&self) -> Arc<Mutex<Velocity>> {
+        self.velocity.clone()
     }
 
     fn process_request(&mut self, request: MazeRunnerRequest) -> Result<()> {
@@ -119,6 +130,11 @@ impl<const R: usize, const C: usize> SimEnvironment<R, C> {
             MazeRunnerRequest::GetDistanceReadout { sensor } => {
                 self.process_distance_readout(sensor)
             }
+            MazeRunnerRequest::GetMotionReadout => self.process_motion_readout(),
+            MazeRunnerRequest::SetVelocity {
+                translational,
+                rotational,
+            } => self.process_set_velocity(translational, rotational),
         };
 
         self.response_tx
@@ -143,18 +159,30 @@ impl<const R: usize, const C: usize> SimEnvironment<R, C> {
 
         let next_position = self.runner.get_real_position();
 
-        let position = self.runner_position.lock().unwrap().clone();
+        {
+            let mut velocity = self.velocity.lock().unwrap();
 
-        let x_step = (next_position.x - position.x) / MOVEMENT_TIME as f64;
-        let y_step = (next_position.y - position.y) / MOVEMENT_TIME as f64;
+            velocity.translational = TRANSLATIONAL_VELOCITY;
+            velocity.rotational = 0.0;
+        }
 
-        for _ in 1..MOVEMENT_TIME + 1 {
-            sleep(Duration::from_millis(1));
+        loop {
+            sleep(Duration::from_micros(100));
 
             let mut runner_position = self.runner_position.lock().unwrap();
 
-            runner_position.x += x_step;
-            runner_position.y += y_step;
+            if (runner_position.x - next_position.x).abs() < 2.0
+                && (runner_position.y - next_position.y).abs() < 2.0
+            {
+                runner_position.x = next_position.x;
+                runner_position.y = next_position.y;
+
+                let mut velocity = self.velocity.lock().unwrap();
+
+                velocity.translational = 0.0;
+
+                break;
+            }
         }
 
         MazeRunnerResponse::Ack
@@ -163,17 +191,36 @@ impl<const R: usize, const C: usize> SimEnvironment<R, C> {
     fn process_rotate(&mut self, direction: RotationDirection) -> MazeRunnerResponse {
         self.runner.rotate(direction);
 
-        let r_step = match direction {
-            RotationDirection::Left => Angle::degrees(90.0),
-            RotationDirection::Right => Angle::degrees(-90.0),
-        } / ROTATION_TIME as f64;
+        let next_position = self.runner.get_real_position();
 
-        for _ in 1..ROTATION_TIME + 1 {
-            sleep(Duration::from_millis(1));
+        {
+            let mut velocity = self.velocity.lock().unwrap();
+
+            velocity.translational = 0.0;
+
+            velocity.rotational = match direction {
+                RotationDirection::Left => ROTATIONAL_VELOCITY,
+                RotationDirection::Right => -ROTATIONAL_VELOCITY,
+            };
+        }
+
+        loop {
+            sleep(Duration::from_micros(100));
 
             let mut runner_position = self.runner_position.lock().unwrap();
 
-            runner_position.theta = runner_position.theta + r_step;
+            if runner_position
+                .theta
+                .is_within(&next_position.theta, Angle::degrees(1.0))
+            {
+                runner_position.theta = next_position.theta;
+
+                let mut velocity = self.velocity.lock().unwrap();
+
+                velocity.rotational = 0.0;
+
+                break;
+            }
         }
 
         MazeRunnerResponse::Ack
@@ -244,5 +291,27 @@ impl<const R: usize, const C: usize> SimEnvironment<R, C> {
         };
 
         MazeRunnerResponse::Distance(distance as u16)
+    }
+
+    fn process_motion_readout(&self) -> MazeRunnerResponse {
+        let position = self.runner_position.lock().unwrap().clone();
+        let velocity = self.velocity.lock().unwrap().clone();
+
+        MazeRunnerResponse::Motion(MotionReadout {
+            x: position.x as i32,
+            y: position.y as i32,
+            theta: position.theta.as_degrees(),
+            velocity_translational: velocity.translational,
+            velocity_rotational: velocity.rotational,
+        })
+    }
+
+    fn process_set_velocity(&self, translational: f64, rotational: f64) -> MazeRunnerResponse {
+        let mut velocity = self.velocity.lock().unwrap();
+
+        velocity.translational = translational;
+        velocity.rotational = rotational;
+
+        MazeRunnerResponse::Ack
     }
 }

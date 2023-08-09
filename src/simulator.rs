@@ -10,6 +10,7 @@ use crate::{
     engine::SimEngine,
     environment::SimEnvironment,
     maze::Maze,
+    velocity::VelocityEnvironment,
     COLS, ROWS,
 };
 
@@ -41,6 +42,7 @@ impl<const R: usize, const C: usize> MazeSimulator<R, C> {
         let buttons = environment.get_buttons_handle();
         let runner_context = environment.get_runner_context_handle();
         let distance_sensors = environment.get_distance_sensors_handle();
+        let velocity = environment.get_velocity_handle();
 
         let _ = thread::spawn(move || environment.process().unwrap());
 
@@ -62,6 +64,10 @@ impl<const R: usize, const C: usize> MazeSimulator<R, C> {
         );
 
         let _ = thread::spawn(move || distance_senors_environment.process().unwrap());
+
+        let velocity_environment = VelocityEnvironment::new(runner_position.clone(), velocity);
+
+        let _ = thread::spawn(move || velocity_environment.process().unwrap());
 
         let mut engine = SimEngine::<R, C, _, _, _>::new(
             maze,

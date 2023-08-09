@@ -31,6 +31,15 @@ pub enum DistanceSensor {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+pub struct MotionReadout {
+    pub x: i32,
+    pub y: i32,
+    pub theta: f64,
+    pub velocity_translational: f64,
+    pub velocity_rotational: f64,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub enum MazeRunnerRequest {
     Initialize,
     MoveForward,
@@ -57,6 +66,11 @@ pub enum MazeRunnerRequest {
     GetDistanceReadout {
         sensor: DistanceSensor,
     },
+    GetMotionReadout,
+    SetVelocity {
+        translational: f64,
+        rotational: f64,
+    },
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -66,6 +80,7 @@ pub enum MazeRunnerResponse {
     WallDetected(bool),
     Buttons(ButtonsState),
     Distance(u16),
+    Motion(MotionReadout),
 }
 
 pub struct SimCommunication {

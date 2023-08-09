@@ -9,6 +9,7 @@ mod panel;
 mod position;
 mod runner;
 mod simulator;
+mod velocity;
 
 use anyhow::Result;
 use clap::Parser;
