@@ -19,6 +19,7 @@ pub struct SimEngine<const R: usize, const C: usize, T, S, U> {
     runner_position: Arc<Mutex<U>>,
     panel: SimPanel,
     runner_context: Arc<Mutex<T>>,
+    distance_sensors: Arc<Mutex<DistanceSensorsReading>>,
 }
 
 impl<const R: usize, const C: usize, T, S, U> SimEngine<R, C, T, S, U>
@@ -38,8 +39,9 @@ where
             maze,
             posts: Posts {},
             runner_position,
-            panel: SimPanel::new(buttons, distance_sensors),
+            panel: SimPanel::new(buttons, distance_sensors.clone()),
             runner_context,
+            distance_sensors,
         }
     }
 }
@@ -71,6 +73,11 @@ where
             .lock()
             .unwrap()
             .draw(s, Color::DARK_GREEN, Color::LIGHT_GREEN)?;
+
+        self.distance_sensors
+            .lock()
+            .unwrap()
+            .draw(s, Color::ORANGE_RED, Color::ORANGE_RED)?;
 
         self.panel.draw(s, Color::DIM_GRAY, Color::DARK_GRAY)?;
 

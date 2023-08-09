@@ -43,12 +43,7 @@ impl<const R: usize, const C: usize> SimEnvironment<R, C> {
 
         let runner_position = Arc::new(Mutex::new(runner_position));
 
-        let distance_sensors = Arc::new(Mutex::new(DistanceSensorsReading {
-            fl: -1,
-            fr: -1,
-            dl: -1,
-            dr: -1,
-        }));
+        let distance_sensors = Arc::new(Mutex::new(DistanceSensorsReading::new()));
 
         let buttons = Arc::new(Mutex::new(ButtonsState::default()));
 

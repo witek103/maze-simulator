@@ -1,4 +1,5 @@
 use anyhow::Result;
+use pix_engine::{line_, shape::Line};
 use std::{
     marker::PhantomData,
     sync::{Arc, Mutex},
@@ -7,9 +8,10 @@ use std::{
 };
 
 use crate::{
+    engine::Render,
     maze::{Cell, CellState, Maze},
     position::{Angle, Millimeters, Position},
-    simulator::{CELL_SIZE_MM, WALL_WIDTH_MM},
+    simulator::{CELL_SIZE_MM, RATIO_VIS_MM, WALL_WIDTH_MM},
 };
 
 pub trait DistanceSensor {
@@ -56,15 +58,19 @@ where
         loop {
             {
                 let runner_position = self.runner_position.lock().unwrap().clone();
-                let mut distance_sensor = self.distance_sensors.lock().unwrap();
+                let mut distance_sensors = self.distance_sensors.lock().unwrap();
 
-                distance_sensor.fl = self.front_left(&runner_position)?;
+                (distance_sensors.fl, distance_sensors.fl_beam) =
+                    self.front_left(&runner_position)?;
 
-                distance_sensor.fr = self.front_right(&runner_position)?;
+                (distance_sensors.fr, distance_sensors.fr_beam) =
+                    self.front_right(&runner_position)?;
 
-                distance_sensor.dl = self.diagonal_left(&runner_position)?;
+                (distance_sensors.dl, distance_sensors.dl_beam) =
+                    self.diagonal_left(&runner_position)?;
 
-                distance_sensor.dr = self.diagonal_right(&runner_position)?;
+                (distance_sensors.dr, distance_sensors.dr_beam) =
+                    self.diagonal_right(&runner_position)?;
             }
 
             sleep(Duration::from_millis(20));
@@ -103,10 +109,16 @@ where
         Ok(false)
     }
 
-    pub fn estimate_measured_distance<DS>(&self, runner_position: &Position<R>) -> Result<i32>
+    pub fn estimate_measured_distance<DS>(
+        &self,
+        runner_position: &Position<R>,
+    ) -> Result<(i32, Line)>
     where
         DS: DistanceSensor,
     {
+        let cos = (runner_position.theta + DS::alpha()).cos();
+        let sin = (runner_position.theta + DS::alpha()).sin();
+
         let sensor_x = runner_position.x
             + DS::position_y_offset() * runner_position.theta.cos()
             + DS::position_x_offset() * (runner_position.theta + Angle::degrees(90.0)).cos();
@@ -115,10 +127,8 @@ where
             + DS::position_x_offset() * (runner_position.theta + Angle::degrees(90.0)).sin();
 
         for distance in 1..101 {
-            let detection_x =
-                sensor_x + distance as f64 * (runner_position.theta + DS::alpha()).cos();
-            let detection_y =
-                sensor_y + distance as f64 * (runner_position.theta + DS::alpha()).sin();
+            let detection_x = sensor_x + distance as f64 * cos;
+            let detection_y = sensor_y + distance as f64 * sin;
 
             let detection_x_index = detection_x as i32 / CELL_SIZE_MM;
             let detection_y_index = detection_y as i32 / CELL_SIZE_MM;
@@ -132,16 +142,17 @@ where
                 detection_x_offset,
                 detection_y_offset,
             )? {
-                return Ok(distance);
+                return Ok((
+                    distance,
+                    scale_line::<R>(sensor_x, sensor_y, detection_x, detection_y),
+                ));
             }
         }
 
         for i in 1..80 {
             let distance = 100 + i * 5;
-            let detection_x =
-                sensor_x + distance as f64 * (runner_position.theta + DS::alpha()).cos();
-            let detection_y =
-                sensor_y + distance as f64 * (runner_position.theta + DS::alpha()).sin();
+            let detection_x = sensor_x + distance as f64 * cos;
+            let detection_y = sensor_y + distance as f64 * sin;
 
             let detection_x_index = detection_x as i32 / CELL_SIZE_MM;
             let detection_y_index = detection_y as i32 / CELL_SIZE_MM;
@@ -155,26 +166,29 @@ where
                 detection_x_offset,
                 detection_y_offset,
             )? {
-                return Ok(distance);
+                return Ok((
+                    distance,
+                    scale_line::<R>(sensor_x, sensor_y, detection_x, detection_y),
+                ));
             }
         }
 
-        Ok(-1)
+        Ok((-1, scale_line::<R>(sensor_x, sensor_y, sensor_x, sensor_y)))
     }
 
-    pub fn front_left(&self, runner_position: &Position<R>) -> Result<i32> {
+    pub fn front_left(&self, runner_position: &Position<R>) -> Result<(i32, Line)> {
         self.estimate_measured_distance::<FL>(runner_position)
     }
 
-    pub fn front_right(&self, runner_position: &Position<R>) -> Result<i32> {
+    pub fn front_right(&self, runner_position: &Position<R>) -> Result<(i32, Line)> {
         self.estimate_measured_distance::<FR>(runner_position)
     }
 
-    pub fn diagonal_left(&self, runner_position: &Position<R>) -> Result<i32> {
+    pub fn diagonal_left(&self, runner_position: &Position<R>) -> Result<(i32, Line)> {
         self.estimate_measured_distance::<DL>(runner_position)
     }
 
-    pub fn diagonal_right(&self, runner_position: &Position<R>) -> Result<i32> {
+    pub fn diagonal_right(&self, runner_position: &Position<R>) -> Result<(i32, Line)> {
         self.estimate_measured_distance::<DR>(runner_position)
     }
 }
@@ -246,4 +260,55 @@ pub struct DistanceSensorsReading {
     pub fr: i32,
     pub dl: i32,
     pub dr: i32,
+    pub fl_beam: Line,
+    pub fr_beam: Line,
+    pub dl_beam: Line,
+    pub dr_beam: Line,
+}
+
+impl DistanceSensorsReading {
+    pub fn new() -> Self {
+        Self {
+            fl: -1,
+            fr: -1,
+            dl: -1,
+            dr: -1,
+            fl_beam: line_!([-1, -1], [-1, -1]),
+            fr_beam: line_!([-1, -1], [-1, -1]),
+            dl_beam: line_!([-1, -1], [-1, -1]),
+            dr_beam: line_!([-1, -1], [-1, -1]),
+        }
+    }
+}
+
+impl Render for DistanceSensorsReading {
+    fn draw<C>(
+        &self,
+        s: &mut pix_engine::state::PixState,
+        primary_color: C,
+        secondary_color: C,
+    ) -> Result<()>
+    where
+        C: Into<Option<pix_engine::prelude::Color>> + std::marker::Copy,
+    {
+        s.stroke(secondary_color);
+        s.fill(primary_color);
+
+        s.line(self.fl_beam)?;
+        s.line(self.fr_beam)?;
+        s.line(self.dl_beam)?;
+        s.line(self.dr_beam)
+    }
+}
+
+fn scale_line<const R: usize>(x1: f64, y1: f64, x2: f64, y2: f64) -> Line {
+    let x1 = (x1 as i32 + WALL_WIDTH_MM / 2) / RATIO_VIS_MM;
+
+    let y1 = (R as i32 * CELL_SIZE_MM - y1 as i32 + WALL_WIDTH_MM / 2) / RATIO_VIS_MM;
+
+    let x2 = (x2 as i32 + WALL_WIDTH_MM / 2) / RATIO_VIS_MM;
+
+    let y2 = (R as i32 * CELL_SIZE_MM - y2 as i32 + WALL_WIDTH_MM / 2) / RATIO_VIS_MM;
+
+    line_!([x1, y1], [x2, y2])
 }
